@@ -74,6 +74,8 @@ namespace SerializationDepthCheck
                 return;
             }
 
+            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += ReflectionResolveAssembly;
+
             // Load all Unity assemblies
             UnityObjectType = LoadUnityAssemblies(unityPath);
 
@@ -86,7 +88,7 @@ namespace SerializationDepthCheck
 
             Console.WriteLine();
             Console.WriteLine("-------------------------------------------------------");
-            Console.WriteLine("Beginning walk of dependency graph...");
+            Console.WriteLine("Beginning walk of {0} types in dependency graph...", dependencies.Count);
             Console.WriteLine();
 
             // Consider every path from each root in turn
@@ -98,6 +100,12 @@ namespace SerializationDepthCheck
 
             Console.WriteLine();
             Console.WriteLine("...done.");
+            Console.ReadKey();
+        }
+
+        private static Assembly ReflectionResolveAssembly(object sender, ResolveEventArgs args)
+        {
+            return _loadedAssemblies[args.Name];
         }
 
         #region Dependency path walking
@@ -147,6 +155,12 @@ namespace SerializationDepthCheck
                 try
                 {
                     allProjectTypes.AddRange(assembly.GetTypes());
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    allProjectTypes.AddRange(ex.Types.Where(t => t != null));
+                    Console.WriteLine("Unable to fully load {0}; {1} of {2} types omitted.",
+                        assembly.FullName, ex.Types.Count(t => t == null), ex.Types.Length);
                 }
                 catch (Exception ex)
                 {
@@ -198,6 +212,8 @@ namespace SerializationDepthCheck
 
         #region Assembly loading
 
+        private static Dictionary<string, Assembly> _loadedAssemblies = new Dictionary<string, Assembly>(); 
+
         private static IEnumerable<Assembly> LoadProjectAssemblies(string projectPath)
         {
             var projectAssemblies = new List<Assembly>();
@@ -216,6 +232,7 @@ namespace SerializationDepthCheck
                 {
                     Assembly a = Assembly.ReflectionOnlyLoadFrom(file);
                     if (projectAssemblies != null) projectAssemblies.Add(a);
+                    _loadedAssemblies.Add(a.FullName, a);
                     Console.WriteLine("Loaded {0}", a.FullName);
                 }
                 catch (BadImageFormatException)
