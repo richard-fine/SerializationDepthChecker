@@ -150,7 +150,7 @@ namespace SerializationDepthCheck
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Couldn't process types from assembly {0}: {1}", assembly.FullName, ex.Message);
+                    Console.WriteLine("Couldn't process types from assembly {0}: {1}", assembly.FullName, ex);
                 }
             }
             return allProjectTypes;
